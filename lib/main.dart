@@ -38,7 +38,6 @@ List<Task> jsonToListOfTask(List<String>? data) {
 
 // TODO: НАКИНУЛСЯ!
 
-// TODO: добавь sharedPreferences
 // TODO: добавь FireStore
 // TODO: залей в PlayMarket
 
@@ -149,6 +148,12 @@ class ListTasks extends StatelessWidget {
                 component.changeTask(task: task, isComplete: value);
               },
             ),
+            onTap: () {
+              final route = MaterialPageRoute(
+                builder: (context) => ChangeTaskScreen(task: task,),
+              );
+              Navigator.push(context, route);
+            },
           ),
         );
       },
@@ -218,6 +223,74 @@ class CreateTaskScreen extends StatelessWidget {
     );
   }
 }
+
+class ChangeTaskScreen extends StatelessWidget {
+
+  final Task task;
+
+  const ChangeTaskScreen({
+    super.key,
+    required this.task,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final component = TodoComponent.of(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(task.title),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(
+                bottom: 16.0,
+              ),
+              child: TextFormField(
+                initialValue: task.title,
+                decoration: const InputDecoration(
+                  labelText: 'Title:',
+                ),
+                onChanged: (value) {
+                  component.setDataTask(title: value);
+                },
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(
+                bottom: 16.0,
+              ),
+              child: TextFormField(
+                initialValue: task.description,
+                decoration: const InputDecoration(
+                  labelText: 'Description:',
+                ),
+                onChanged: (value) {
+                  component.setDataTask(description: value);
+                },
+              ),
+            ),
+            ElevatedButton(
+              onPressed: component.isValid ? () {
+                component.changeTask(
+                  task: task,
+                  title: component.title,
+                  description: component.description,
+                );
+                Navigator.pop(context);
+              } : null,
+              child: const Text('Change task'),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 
 
 var tasksRepository = <Task>[];
