@@ -1,29 +1,43 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
 
-void main() {
-  tasksRepository = [
-    Task(
-      title: 'Test task 1',
-      description: 'Test description',
-    ),
-    Task(
-        title: 'Test task 2',
-        description: 'Test description',
-        isComplete: true
-    ),
-    Task(
-      title: 'Test task 3',
-      description: 'Test description',
-    ),
-  ];
-  runApp(const TodoComponent(
-      child: Application()
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final SharedPreferences preferences = await SharedPreferences.getInstance();
+
+  tasksRepository = jsonToListOfTask(preferences.getStringList('tasks'));
+
+  runApp(TodoComponent(
+    preferences: preferences,
+    child: const Application(),
   ));
+}
+
+List<String> listOfTaskToJson(List<Task> tasks) {
+  return tasks.map((e) => {
+    'title': e.title,
+    'description': e.description,
+    'isComplete': e.isComplete,
+  }).map((e) => jsonEncode(e)).toList();
+}
+
+List<Task> jsonToListOfTask(List<String>? data) {
+  if (data == null) {
+    return <Task>[];
+  }
+  return data.map((task) => jsonDecode(task)).map((task) {
+    return Task(
+      title: task['title'],
+      description: task['description'],
+      isComplete: task['isComplete'],
+    );
+  }).toList();
 }
 
 // TODO: НАКИНУЛСЯ!
 
-// TODO: залей в гитхаб
 // TODO: добавь sharedPreferences
 // TODO: добавь FireStore
 // TODO: залей в PlayMarket
@@ -99,11 +113,11 @@ class ListTasks extends StatelessWidget {
   final List<Task> tasks;
 
   const ListTasks(
-      this.tasks,
-      {
-        super.key,
-      }
-      );
+    this.tasks,
+    {
+      super.key,
+    }
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -114,14 +128,27 @@ class ListTasks extends StatelessWidget {
       itemBuilder: (context, index) {
         final task = tasks.elementAt(index);
 
-        return ListTile(
-          title: Text(task.title),
-          subtitle: Text(task.description),
-          trailing: Checkbox(
-            value: task.isComplete,
-            onChanged: (value) {
-              component.changeTask(task: task, isComplete: value);
-            },
+        return Dismissible(
+          key: Key(task.title),
+          direction: DismissDirection.startToEnd,
+          onDismissed: (direction) {
+            component.deleteTask(task);
+          },
+          background: Container(
+            color: Colors.red.shade200,
+            padding: const EdgeInsets.all(16),
+            alignment: Alignment.centerLeft,
+            child: const Icon(Icons.delete_outline),
+          ),
+          child: ListTile(
+            title: Text(task.title),
+            subtitle: Text(task.description),
+            trailing: Checkbox(
+              value: task.isComplete,
+              onChanged: (value) {
+                component.changeTask(task: task, isComplete: value);
+              },
+            ),
           ),
         );
       },
@@ -132,7 +159,9 @@ class ListTasks extends StatelessWidget {
 
 class CreateTaskScreen extends StatelessWidget {
 
-  const CreateTaskScreen({super.key});
+  const CreateTaskScreen({
+    super.key,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -220,10 +249,12 @@ class Task {
 
 class TodoComponent extends StatefulWidget {
 
+  final SharedPreferences preferences;
   final Widget child;
 
   const TodoComponent({
     super.key,
+    required this.preferences,
     required this.child,
   });
 
@@ -249,6 +280,10 @@ class TodoState extends State<TodoComponent> {
     return title.trim().isNotEmpty;
   }
 
+  void saveTasksRepository() {
+    widget.preferences.setStringList('tasks', listOfTaskToJson(tasksRepository));
+  }
+
   void setDataTask({
     String? title,
     String? description,
@@ -262,12 +297,14 @@ class TodoState extends State<TodoComponent> {
   void addTask(Task task) {
     setState(() {
       tasksRepository.add(task);
+      saveTasksRepository();
     });
   }
 
   void deleteTask(Task task) {
     setState(() {
       tasksRepository.remove(task);
+      saveTasksRepository();
     });
   }
 
